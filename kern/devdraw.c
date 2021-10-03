@@ -76,6 +76,8 @@ struct Client
 	int		refreshme;
 	int		infoid;
 	int		op;
+	int		displaydpi;
+	int		forcedpi;
 };
 
 struct Refresh
@@ -165,6 +167,8 @@ extern	void		flushmemscreen(Rectangle);
 	void		drawfreedimage(DImage*);
 	Client*		drawclientofpath(ulong);
 	DImage*	allocdimage(Memimage*);
+
+int displaydpi = 200;
 
 static	char Enodrawimage[] =	"unknown id for draw image";
 static	char Enodrawscreen[] =	"unknown id for draw screen";
@@ -783,6 +787,7 @@ drawnewclient(void)
 	cl->slot = i;
 	cl->clientid = ++sdraw.clientid;
 	cl->op = SoverD;
+	cl->displaydpi = displaydpi;
 	sdraw.client[i] = cl;
 	return cl;
 }
@@ -1408,6 +1413,7 @@ drawmesg(Client *client, void *av, int n)
 	int c, repl, m, y, dstid, scrnid, ni, ci, j, nw, e0, e1, op, ox, oy, oesize, esize, doflush;
 	uchar *u, *a, refresh;
 	char *fmt;
+	Fmt f;
 	ulong value, chan;
 	Rectangle r, clipr;
 	Point p, q, *pp, sp;
@@ -1654,6 +1660,34 @@ drawmesg(Client *client, void *av, int n)
 			memset(font->fchar, 0, ni*sizeof(FChar));
 			font->nfchar = ni;
 			font->ascent = a[9];
+			continue;
+
+		/* query: 'Q' n[1] queryspec[n] */
+		case 'q':
+			if(n < 2)
+				error(Eshortdraw);
+			m = 1+1+a[1];
+			if(n < m)
+				error(Eshortdraw);
+			fmtstrinit(&f);
+			for(c=0; c<a[1]; c++) {
+				switch(a[2+c]) {
+				default:
+					error("unknown query");
+					break;
+				case 'd':       /* dpi */
+					if(client->forcedpi)
+						fmtprint(&f, "%11d ", client->forcedpi);
+					else {
+						fmtprint(&f, "%11d ", client->displaydpi);
+					}
+					break;
+				}
+			}
+			client->readdata = (uchar*)fmtstrflush(&f);
+			if(client->readdata == nil)
+				error(Enomem);
+			client->nreaddata = strlen((char*)client->readdata);
 			continue;
 
 		/* load character: 'l' fontid[4] srcid[4] index[2] R[4*4] P[2*4] left[1] width[1] */

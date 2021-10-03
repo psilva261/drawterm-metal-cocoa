@@ -193,6 +193,7 @@ struct Display
 	Image		*windows;
 	Image		*screenimage;
 	int		_isnewdisplay;
+	int		dpi;
 };
 
 struct Image
